@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from data import TorDataSet  # Assuming your class is in TorDataSet.py
+from data import TorDataSet  
 
 
 
