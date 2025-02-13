@@ -15,10 +15,9 @@ def train(model, train_loader, criterion, optimizer, device):
     for inputs, labels in train_loader:
         inputs, labels = inputs.to(device), labels.to(device)
 
+        optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
-
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
@@ -49,6 +48,7 @@ def evaluate(model, val_loader, criterion, device):
     accuracy = correct / total
     return running_loss / len(val_loader), accuracy
 
+
 def main():
     file_path = 'tor_100w_2500tr.npz'
 
@@ -66,14 +66,20 @@ def main():
 
     batch_size = 128
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(valset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
 
     # Model, loss, optimizer
-    model = SACNN(num_classes=len(dict_labels), maxlen=200)
+    model = SACNN(
+        num_classes=len(dataset.dict_labels),
+        maxlen=maxlen,
+        attention_heads=4,       # 增加注意力头数
+        dropout_rate=0.5         # 添加dropout
+    )
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.003)
+    optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)  # 使用AdamW
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)  # 添加学习率调度
 
     # Train the model
     num_epochs = 30
@@ -83,10 +89,19 @@ def main():
     for epoch in range(num_epochs):
         train_loss, train_acc = train(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+        scheduler.step(val_loss)  # 根据验证损失调整学习率
 
-        print(f'Epoch {epoch + 1}/{num_epochs}, Train Loss: {train_loss:.4f}, Train Accuracy: {train_acc*100:.2f}%, Val Loss: {val_loss:.4f}, Val Accuracy: {val_acc*100:.2f}%')
+        # 保存最佳模型
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), "best_model.pth")
 
-    # Evaluate on test set
+        print(f'Epoch {epoch+1}/{num_epochs}')
+        print(f'Train Loss: {train_loss:.4f} Acc: {train_acc*100:.2f}%')
+        print(f'Val Loss: {val_loss:.4f} Acc: {val_acc*100:.2f}%')
+
+    # 加载最佳模型进行测试
+    model.load_state_dict(torch.load("best_model.pth"))
     test_loss, test_acc = evaluate(model, test_loader, criterion, device)
     print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc*100:.2f}%')
 
