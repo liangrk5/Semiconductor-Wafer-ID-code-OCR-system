@@ -1,7 +1,10 @@
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
 from data import TorDataSet  
+from model import SACNN
 
 def train(model, train_loader, criterion, optimizer, device):
     model.train()
