@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from TorDataSet import TorDataSet  # Assuming your class is in TorDataSet.py
+from data import TorDataSet  # Assuming your class is in TorDataSet.py
 
 
 
@@ -33,3 +33,7 @@ def main():
     for data, labels in train_loader:
         print(f"Batch data shape: {data.shape}, Batch labels shape: {labels.shape}")
         break 
+
+
+if __name__ == "__main__":
+    main()
